@@ -2,6 +2,12 @@
 
 Email system with spam detection, spelling check, AES encryption.
 
+
+
+https://github.com/mendrika261/S4-ANALYSE-email-spam-spelling/assets/97053149/56d736c7-8432-492e-9e11-11394d0c0deb
+
+
+
 ## Functionality 🛠️
 - Automatic spam detection
 - Auto refresh model after (10) new emails, or manually after marking an email as spam
