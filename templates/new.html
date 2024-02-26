@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+              <div class="email-wrapper row remain-height pos-r scrollable bgc-white">
+                <div class="email-content open no-inbox-view">
+                  <div class="email-compose">
+                    <div class="d-n@md+ p-20">
+                      <a class="email-side-toggle c-grey-900 cH-blue-500 td-n" href="javascript:void(0)">
+                        <i class="ti-menu"></i>
+                      </a>
+                    </div>
+                    <form class="email-compose-body" method="post" id="form">
+                      {% csrf_token %}
+                      <h4 class="c-grey-900 mB-20">{% if parent %}Répondre: {{ parent.sender.username }}{% else %}Nouveau email{% endif %}</h4>
+                      <div class="send-header">
+                        <div class="mb-3">
+                        Destinataire
+                          <select type="text" class="form-control" required name="receiver">
+                          {% if parent %}
+                              {% if parent.sender.id == user_id %}
+                                  <option value="{{ parent.receiver.id }}">{{ parent.receiver }}</option>
+                                  {% else %}
+                                <option value="{{ parent.sender.id }}">{{ parent.sender }}</option>
+                                  {% endif %}
+                          {% else %}
+                              {% for user in users %}
+                                  {% if user.id != user_id %}
+                                      <option value="{{ user.id }}">{{ user }}</option>
+                                  {% endif %}
+                              {% endfor %}
+                          {% endif %}
+                          </select>
+                        </div>
+                        <div class="mb-3">
+                          <input class="form-control" placeholder="Objet" required name="subject" value="{% if subject %}RE: {{ subject }}{% endif %}">
+                        </div>
+                        <div class="mb-3">
+                          <div id="copy" class="form-control" style="max-height: 250px; overflow-y: scroll;">
+                          </div>
+                          <div id="editor" class="form-control" style="height: 300px; overflow-y: scroll;">
+                          </div>
+                        </div>
+                          <input type="hidden" name="parent_id" value="{{ parent_id }}">
+                      </div>
+
+                      <div id="compose-area"></div>
+                      <div class="text-end mrg-top-30" spellcheck="false">
+                        <button class="btn btn-danger btn-color" type="submit">Envoyer</button>
+                        <!--<span style="color: red" data-bs-toggle="tooltip" title="And here's some amazing content. <strong>It's very engaging.</strong> Right?" data-bs-html=true>Click to toggle popover</span>-->
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+
+    <link href="{% static 'quill/quill.snow.css' %}" rel="stylesheet">
+    <script src="{% static 'quill/quill.js' %}"></script>
+    <script src="{% static 'popper/popper.min.js' %}"></script>
+    <script src="{% static 'tippy/tippy-bundle.umd.js' %}"></script>
+    <script>
+    // Add tooltip-like functionality
+
+    var quill = new Quill('#editor', {
+        theme: 'snow',
+        placeholder: 'Ecrivez votre email ici...',
+    });
+
+    var editorElement = document.querySelector('#editor');
+    var editorContainer = editorElement.parentNode;
+    editorContainer.setAttribute('spellcheck', 'false');
+
+
+    let xhr = null;
+    let isProcessing = false;
+    let ignoreQueue = false;
+
+    quill.on('text-change', function(delta, oldDelta, source) {
+        if (xhr) {
+            xhr.abort();
+        }
+
+        if (isProcessing) {
+            ignoreQueue = true;
+            return;
+        }
+
+        isProcessing = true;
+        ignoreQueue = false;
+
+        console.log(quill.root.innerHTML);
+        console.log(quill.root.innerText);
+        xhr = new XMLHttpRequest();
+
+        xhr.open('POST', "{% url 'verify' %}");
+        let formData = new FormData();
+        formData.append('text', quill.root.innerHTML);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    let markedText = JSON.parse(xhr.responseText);
+                    console.log(markedText);
+                    setTimeout(function() {
+                        document.getElementById('copy').innerHTML = markedText;
+                    }, 5);
+                    /*setTimeout(function() {
+                        quill.focus();
+                    }, 5);
+                    setTimeout(function() {
+                        quill.setSelection(quill.getLength());
+                    }, 5);*/
+
+                    setTimeout(function() {
+                        tippy('[tooltip]', {
+                        content: (reference) => reference.getAttribute('tooltip'),
+                        allowHTML: true,
+                        interactive: true,
+                        interactiveBorder: 5
+                    });
+                    }, 5);
+                } else {
+                    console.log('Error: ' + xhr.status);
+                }
+                isProcessing = false;
+
+                if (ignoreQueue) {
+                    ignoreQueue = false;
+                    quill.on.trigger('text-change', delta, oldDelta, source);
+                }
+            }
+        };
+
+        xhr.send(formData);
+    });
+
+
+    document.getElementById("form").addEventListener("submit", submitForm);
+
+    function submitForm(e) {
+        console.log(quill.root.innerText);
+        if (quill.root.innerText.trim() === '') {
+            e.preventDefault();
+            alert('Veuillez remplir le contenu de l\'email');
+            return false;
+        } else {
+            let content = document.createElement('input');
+            content.setAttribute('type', 'hidden');
+            content.setAttribute('name', 'content');
+            content.setAttribute('value', quill.root.innerHTML);
+            document.getElementById('form').appendChild(content);
+            return true;
+        }
+    }
+
+    function replace_word(old, correct)
+    {
+        let text = quill.root.innerHTML;
+        let regex = new RegExp(old, "g");
+        text = text.replace(regex, correct);
+        quill.root.innerHTML = text;
+    }
+    </script>
+{% endblock %}

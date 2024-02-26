@@ -1,0 +1,220 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no">
+    <title>Email</title>
+    <style>
+      #loader {
+        transition: all 0.3s ease-in-out;
+        opacity: 1;
+        visibility: visible;
+        position: fixed;
+        height: 100vh;
+        width: 100%;
+        background: #fff;
+        z-index: 90000;
+      }
+
+      #loader.fadeOut {
+        opacity: 0;
+        visibility: hidden;
+      }
+
+
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        position: absolute;
+        top: calc(50% - 20px);
+        left: calc(50% - 20px);
+        background-color: #333;
+        border-radius: 100%;
+        -webkit-animation: sk-scaleout 1.0s infinite ease-in-out;
+        animation: sk-scaleout 1.0s infinite ease-in-out;
+      }
+
+      @-webkit-keyframes sk-scaleout {
+        0% { -webkit-transform: scale(0) }
+        100% {
+          -webkit-transform: scale(1.0);
+          opacity: 0;
+        }
+      }
+
+      @keyframes sk-scaleout {
+        0% {
+          -webkit-transform: scale(0);
+          transform: scale(0);
+        } 100% {
+          -webkit-transform: scale(1.0);
+          transform: scale(1.0);
+          opacity: 0;
+        }
+      }
+    </style>
+  <script defer="defer" src="{% static 'main.js' %}"></script>
+  <link href="{% static 'style.css' %}" rel="stylesheet"></head>
+  <body class="app">
+
+    <div id="loader">
+      <div class="spinner"></div>
+    </div>
+
+    <script>
+      window.addEventListener('load', function load() {
+        const loader = document.getElementById('loader');
+        setTimeout(function() {
+          loader.classList.add('fadeOut');
+        }, 300);
+      });
+    </script>
+
+
+
+    <div>
+
+      <!-- #Main ============================ -->
+      <div>
+
+        <!-- ### $App Screen Content ### -->
+        <main class="bgc-grey-100">
+          <div id="mainContent">
+            <div>
+              <div class="email-app">
+                <div class="email-side-nav ov-h" style="height: 100vh;">
+                    <div class="h-100 layers">
+                    <div class="p-20 bgc-grey-100 layer w-100">
+                      <a href="{% url 'new' %}" class="btn btn-danger d-grid">Nouveau email</a>
+                    </div>
+                    <div class="scrollable pos-r bdT layer w-100 fxg-1">
+                      <ul class="p-20 nav flex-column">
+                        <li class="nav-item">
+                          <a href="{% url 'inbox' %}" class="nav-link c-grey-800 cH-blue-500 actived">
+                            <div class="peers ai-c jc-sb">
+                              <div class="peer peer-greed">
+                                <i class="mR-10 ti-email"></i>
+                                <span>Reçu</span>
+                              </div>
+                              <div class="peer">
+                                <span class="badge rounded-pill bgc-deep-purple-50 c-deep-purple-700" id="unread">0</span>
+                              </div>
+                            </div>
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a href="{% url 'sent' %}" class="nav-link c-grey-800 cH-blue-500">
+                            <div class="peers ai-c jc-sb">
+                              <div class="peer peer-greed">
+                                <i class="mR-10 ti-share"></i>
+                                <span>Envoyé</span>
+                              </div>
+                            </div>
+                          </a>
+                        </li>
+                        <li class="nav-item">
+                          <a href="{% url 'spam' %}" class="nav-link c-grey-800 cH-blue-500">
+                            <div class="peers ai-c jc-sb">
+                              <div class="peer peer-greed">
+                                <i class="mR-10 ti-alert"></i>
+                                <span>Spam</span>
+                              </div>
+                              <div class="peer">
+                                <span class="badge rounded-pill bgc-orange-50 c-orange-700" id="spam">0</span>
+                              </div>
+                            </div>
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                    <div class="m-5 p-5">
+                        <strong>Utilisateur</strong> <br>
+                        <select class="form-control" id="user_switch" onchange="switch_user()">
+                            {% for user in users %}
+                            <option value="{{ user.id }}" {% if user_id == user.id %}selected{% endif %}>{{ user.email }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="m-5 p-5">
+                        <strong>Model</strong> <br>
+                        <strong class="badge rounded-pill bgc-yellow-50 c-yellow-700" id="remind"></strong> avant auto mise à jour
+                        <br> <br>
+                        <a href="{% url 'train' %}" class="btn btn-success d-grid">Maintenant</a> <br>
+                    </div>
+                  </div>
+                </div>
+                {% block content %}
+                {% endblock %}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <!-- ### $App Screen Footer ###
+        <footer class="bdT ta-c p-30 lh-0 fsz-sm c-grey-600">
+          <span>Copyright © 2021 Designed by <a href="https://colorlib.com" target="_blank" title="Colorlib">Colorlib</a>. All rights reserved.</span>
+        </footer> -->
+      </div>
+    </div>
+    <script>
+        {% if model %}
+            alert('Nouveau model créé');
+            window.location.href = "{% url 'inbox' %}";
+        {% endif %}
+        function switch_user()
+        {
+            let user_id = document.getElementById('user_switch').value;
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/switch/'+user_id , true);
+            xhr.send();
+            xhr.onreadystatechange = function() {
+                if (this.readyState === 4 && this.status === 200) {
+                    window.location.reload();
+                }
+            }
+        }
+
+        function get_remind()
+        {
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/remind' , true);
+            xhr.send();
+            xhr.onreadystatechange = function() {
+                if (this.readyState === 4 && this.status === 200) {
+                    let data = JSON.parse(this.responseText);
+                    document.getElementById('remind').innerHTML = data;
+                }
+            }
+        }
+
+        function get_count(user_id)
+        {
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/count/'+user_id , true);
+            xhr.send();
+            xhr.onreadystatechange = function() {
+                if (this.readyState === 4 && this.status === 200) {
+                    let data = JSON.parse(this.responseText);
+                    if(data.unread > 0) {
+                        document.getElementById('unread').innerHTML = data.unread;
+                        document.getElementById('unread').style.display = 'block';
+                    } else document.getElementById('unread').style.display = 'none';
+                    if(data.spam > 0) {
+                        document.getElementById('spam').innerHTML = data.spam;
+                        document.getElementById('spam').style.display = 'block';
+                    } else document.getElementById('spam').style.display = 'none';
+                }
+            }
+        }
+
+        get_count({{ user_id }});
+        get_remind();
+        setInterval(function() {
+            get_count({{ user_id }});
+            get_remind();
+        }, 1000);
+    </script>
+  </body>
+</html>

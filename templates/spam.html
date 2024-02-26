@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="email-wrapper row bgc-white ov-h" style="height: 100vh;">
+    <div id="list_div" class="email-list h-100 layers w-100">
+                  <div class="layer w-100">
+                    <div class="bgc-grey-100 peers ai-c jc-sb p-20 fxw-nw">
+                      <div class="peer">
+                          <h3>Spam</h3>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn bgc-white bdrs-2 mR-3 cur-p" onclick="to_trash()">
+                            <i class="ti-trash"></i> Supprimer
+                          </button>
+                          <button type="button" class="btn bgc-white bdrs-2 mR-3 cur-p" onclick="to_normal()">
+                            <i class="ti-check"></i> Marquer comme normal
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="layer w-100">
+                    <div class="bdT bdB">
+                    </div>
+                  </div>
+                  <div class="layer w-100 fxg-1 scrollable pos-r">
+                    <div id="email_list">
+
+                      <div class="email-list-item peers fxw-nw p-20 bdB bgcH-grey-100 cur-p" id="email_template" style="display: none !important;">
+                        <div class="peer mR-10">
+                          <div class="checkbox checkbox-circle checkbox-info peers ai-c">
+                            <input type="checkbox" class="selection" id="selection">
+                            <label for="inputCall1" class="form-label peers peer-greed js-sb ai-c"></label>
+                          </div>
+                        </div>
+                        <div class="peer peer-greed ov-h">
+                          <div class="peers ai-c">
+                            <div class="peer peer-greed">
+                              <h6 id="email_template_name"></h6>
+                            </div>
+                            <div class="peer">
+                              <small id="email_template_date"></small>
+                            </div>
+                          </div>
+                          <h5 class="fsz-def tt-c c-grey-900" id="email_template_subject"></h5>
+                          <span class="whs-nw w-100 ov-h tov-e d-b" id="email_template_content"></span>
+                        </div>
+                      </div>
+
+                    </div>
+                      <div class="w-100 text-center p-5" style="position: absolute; bottom: 0">
+                          <a href="#" id="load_more">Afficher plus</a>
+                      </div>
+                  </div>
+    </div>
+    <div class="email-content h-100">
+                  <div class="h-100 scrollable pos-r" id="content_div" >
+                    <div id="content_template" style="display: none !important;">
+                        <div class="bgc-grey-100 peers ai-c jc-sb p-20 fxw-nw d-n@md+">
+                      <div class="peer">
+                      </div>
+                    </div>
+                        <div class="email-content-wrapper">
+                      <div class="peers ai-c jc-sb pX-40 pY-30">
+                        <div class="peers peer-greed">
+                          <div class="peer mR-20">
+                            <img id="content_photo" class="bdrs-50p w-3r h-3r" alt="" src="">
+                          </div>
+                          <div class="peer">
+                            <small id="content_date"></small>
+                            <h5 class="c-grey-900 mB-5"></h5>
+                            <span id="content_sender"></span>
+                          </div>
+                        </div>
+                        <div class="peer" id="reply_content">
+                          <a href="" class="btn btn-danger bdrs-50p p-15 lh-0">
+                            <i class="fa fa-reply"></i>
+                          </a>
+                        </div>
+                      </div>
+
+
+                      <div class="bdT pX-40 pY-30">
+                        <h4 id="content_subject"></h4>
+                        <p id="content_content">
+                        </p>
+                      </div>
+                    </div>
+                    </div>
+                  </div>
+                </div>
+</div>
+    <script>
+        function get_email(user_id, page, limit)
+        {
+            let email_list = document.getElementById('email_list');
+            let email_template = document.getElementById('email_template');
+            let email_template_name = document.getElementById('email_template_name');
+            let email_template_date = document.getElementById('email_template_date');
+            let email_template_subject = document.getElementById('email_template_subject');
+            let email_template_content = document.getElementById('email_template_content');
+            let email_selection = document.getElementById('selection');
+
+
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/spam/'+user_id+'/'+page+'/'+limit , true);
+            xhr.send()
+            xhr.onreadystatechange = function() {
+                if (this.readyState === 4 && this.status === 200) {
+                    let response = JSON.parse(this.responseText);
+                    for (let i = 0; i < response.length; i++) {
+                        email_template_name.innerHTML = "De: " + response[i].sender_name + ' (' + response[i].sender_email + ')';
+                        email_template_date.innerHTML = response[i].date;
+                        email_template_subject.innerHTML = "Objet: " + response[i].subject;
+                        email_template_content.innerHTML = response[i].content.replace(/<[^>]+>/g, ' ');
+                        email_selection.id = response[i].parent_id;
+                        let clone = email_template.cloneNode(true);
+                        if(response[i].read == null)
+                        {
+                            clone.style.borderLeft = '5px solid #f44336';
+                            clone.style.fontWeight = 'bold';
+                        }
+                        clone.id = 'email_'+response[i].id;
+                        clone.onclick = function () {
+                            show_content_email(response[i].id);
+                        }
+                        clone.style.display = 'block';
+                        email_list.appendChild(clone);
+                    }
+                }
+            }
+        }
+        function show_email(user_id, limit=5)
+        {
+            let page = 1;
+            get_email(user_id, page, limit)
+
+            let load_more = document.getElementById('load_more');
+            load_more.addEventListener('click', async function () {
+                page++;
+                await get_email(user_id, page, limit);
+            })
+        }
+        function show_content_email(email_id)
+        {
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/content/'+email_id , true);
+            xhr.send()
+
+            try {
+                let email = document.getElementById('email_'+email_id);
+                email.style.borderLeft = 'none';
+                email.style.fontWeight = 'normal';
+            } catch (e) {}
+
+
+            let list_div = document.getElementById('list_div');
+            let content_div = document.getElementById('content_div'); //  document.getElementById('content_div').children[0].remove()
+            let content_template = document.getElementById('content_template');
+            let content_photo = document.getElementById('content_photo');
+            let content_date = document.getElementById('content_date');
+            let content_sender = document.getElementById('content_sender');
+            let content_subject = document.getElementById('content_subject');
+            let content_content = document.getElementById('content_content');
+
+            while (content_div.children.length > 3) {
+                if (content_div.lastChild.id.startsWith('content_'))
+                    content_div.removeChild(content_div.lastChild);
+            }
+
+            xhr.onreadystatechange = function () {
+                 if (this.readyState === 4 && this.status === 200) {
+                     let response = JSON.parse(this.responseText);
+                     for (let i = 0; i < response.length; i++) {
+                         content_photo.src = response[i].sender_photo;
+                         content_date.innerHTML = response[i].date;
+                         if(response[i].sender_id === {{ user_id }})
+                             content_sender.innerHTML = "De: vous";
+                         else {
+                             content_sender.innerHTML = "De: " + response[i].sender_name + ' (' + response[i].sender_email + ')';
+                         }
+                         if (response[i].sender_id === {{ user_id }}) {
+                             if (response[i].read == null)
+                                 content_date.innerHTML += ' <span class="badge rounded-pill bgc-red-50 c-red-700">Non délivré</span>';
+                             else
+                                 content_date.innerHTML += ' <span class="badge rounded-pill bgc-green-50 c-green-700">Délivré le '+response[i].read+'</span>';
+                         }
+                         content_subject.innerHTML = "Objet: " + response[i].subject;
+                         content_content.innerHTML = response[i].content;
+                         let clone = content_template.cloneNode(true);
+                         clone.id = 'content_'+response[i].id;
+                         clone.style.display = 'block';
+                         if (response[i].sender_id === {{ user_id }}) {
+                             clone.querySelector('#reply_content').innerHTML = '';
+                         } else {
+                             clone.querySelector('#reply_content').children[0].href = '/new/'+response[i].parent_id;
+                         }
+                         content_div.appendChild(clone);
+                     }
+
+
+                     list_div.classList.remove('w-100');
+                 }
+            }
+        }
+
+        function get_marked()
+        {
+            let checkbox = document.getElementsByClassName('selection');
+            let marked = '';
+            for (const c of checkbox) {
+                if(c.checked)
+                    marked += ';'+c.id;
+            }
+            return marked.slice(1);
+        }
+
+        function to_normal()
+        {
+            let normal = get_marked();
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/safe/'+normal , true);
+
+            xhr.onreadystatechange = function () {
+                if (this.readyState === 4 && this.status === 200) {
+                    let data = JSON.parse(this.responseText);
+                    if(data.build)
+                        alert('Nouveau modèle de detection créé');
+                    let normals = normal.split(';')
+                    for (const n of normals) {
+                        document.getElementById(n).parentElement.parentElement.parentElement.parentElement.remove();
+                    }
+                }
+            }
+            xhr.send()
+        }
+
+        function to_trash()
+        {
+            let spam = get_marked();
+            let xhr = new XMLHttpRequest();
+            xhr.open('GET', '/api/delete/'+spam , true);
+
+            xhr.onreadystatechange = function () {
+                if (this.readyState === 4 && this.status === 200) {
+                    let spams = spam.split(';')
+                    for (const s of spams) {
+                        document.getElementById(s).parentElement.parentElement.parentElement.parentElement.remove();
+                    }
+                }
+            }
+
+            xhr.send()
+        }
+
+        show_email({{ user_id }})
+        {% if email_id %}
+        show_content_email({{ email_id }})
+        {% endif %}
+    </script>
+{% endblock %}
