@@ -1,15 +1,3 @@
-nltk
-scikit-learn
-django
-pycryptodome
-pandas
-beautifulsoup4
-unidecode
-pillow
-distance de Levenshtein
-pyarrow
-fastparquet
-
 # Overview 🔮
 
 Email system with spam detection, spelling check, AES encryption.
